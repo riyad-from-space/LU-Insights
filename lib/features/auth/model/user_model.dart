@@ -6,6 +6,7 @@ class UserModel {
   final String email;
   final int studentId;
   final String password;
+  final String role; // Added for role-based access
 
   //constructor
 
@@ -17,6 +18,7 @@ class UserModel {
     required this.email,
     required this.studentId,
     required this.password,
+    required this.role, // Added
   });
 
   //usermodel to map
@@ -30,6 +32,7 @@ class UserModel {
       'email': email,
       'studentId': studentId,
       'password': password,
+      'role': role, // Added
     };
   }
 
@@ -44,6 +47,7 @@ class UserModel {
       email: map['email'],
       studentId: map['studentId'].toInt(),
       password: map['password'],
+      role: map['role'] ?? 'student', // Added
     );
   }
 }

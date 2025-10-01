@@ -13,6 +13,7 @@ class AuthRepository {
     required String email,
     required String password,
     required int studentId,
+    String role = 'student', // Added role with default
   }) async {
     try {
       //creatae user in firebase auth
@@ -36,6 +37,7 @@ class AuthRepository {
         userName: userName,
         password: password,
         studentId: studentId,
+        role: role, // Added
       );
 
       await _firestore.collection('users').doc(user.uid).set(user.toMap());

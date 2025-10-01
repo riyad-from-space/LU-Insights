@@ -1,18 +1,3 @@
-// abstract class AuthState {
-//   const AuthState();
-
-// }
-
-// class AuthInitial extends AuthState {
-//   const AuthInitial();
-// }
-// class AusthLoading extends AuthState {
-//   const AusthLoading();
-// }
-// class Authenticated extends AuthState {
-//   const Authenticated();
-// }
-
 import 'package:insights/features/auth/model/user_model.dart';
 
 class AuthStateGeneric {

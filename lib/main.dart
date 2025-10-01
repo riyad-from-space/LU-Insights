@@ -12,6 +12,7 @@ import 'package:insights/features/home/view/clubs_screen.dart';
 import 'package:insights/features/home/view/exam_materials_screen.dart';
 import 'package:insights/features/home/view/home_screen.dart';
 import 'package:insights/features/home/view/student_live_track_screen.dart';
+import 'features/transportation/view/transportation_screen.dart';
 
 import 'features/auth/view_model/auth_viewmodel.dart';
 import 'features/clubs/repositories/seed_clubs.dart';
@@ -55,6 +56,7 @@ class MyApp extends StatelessWidget {
                   const StudentLiveTrackScreen(),
               '/admin_seed': (context) => const AdminSeedScreen(),
               '/profile': (context) => const ProfileScreen(),
+              '/transportation': (context) => const TransportationScreen(),
             },
             home: authStatus.when(
               data: (user) =>
