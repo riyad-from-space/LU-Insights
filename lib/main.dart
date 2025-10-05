@@ -15,14 +15,78 @@ import 'package:insights/features/home/view/student_live_track_screen.dart';
 import 'features/admin/admin_panel_screen.dart';
 import 'features/auth/view_model/auth_viewmodel.dart';
 import 'features/transportation/view/transportation_screen.dart';
+import 'firebase_options.dart';
+
+class _AdminRouteGuard extends StatelessWidget {
+  final Widget child;
+  const _AdminRouteGuard(this.child);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final authStatus = ref.watch(authStatusProvider);
+        return authStatus.when(
+          data: (user) {
+            if (user != null && user.email == 'admin_lu@gmail.com') {
+              return child;
+            } else {
+              return Scaffold(
+                appBar: AppBar(
+                  title: const Text('Access Denied'),
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                body: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.block,
+                        size: 64,
+                        color: Colors.red,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Access Denied',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Only administrators can access this section.',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+          },
+          loading: () => const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Scaffold(
+            body: Center(child: Text('Error: ${e.toString()}')),
+          ),
+        );
+      },
+    );
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  // TEMP: Seed Firestore data on app start (remove after first run)
-  // await seedFeatures();
-  // await seedClubs();
-  // await seedTransportation(); // <-- Add this line temporarily
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const ProviderScope(child: MyApp()));
 }
 
@@ -53,7 +117,8 @@ class MyApp extends StatelessWidget {
               '/clubs': (context) => const ClubsScreen(),
               '/student_live_track': (context) =>
                   const StudentLiveTrackScreen(),
-              '/admin_seed': (context) => const AdminSeedScreen(),
+              '/admin_seed': (context) =>
+                  const _AdminRouteGuard(AdminSeedScreen()),
               '/profile': (context) => const ProfileScreen(),
               '/transportation': (context) => const TransportationScreen(),
             },

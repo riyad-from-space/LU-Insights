@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../model/transportation_member_model.dart';
-import '../model/transportation_schedule_model.dart';
 import '../model/transportation_post_model.dart';
+import '../model/transportation_schedule_model.dart';
 
 class TransportationRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -46,5 +47,16 @@ class TransportationRepository {
 
   Future<void> addPost(TransportationPost post) async {
     await _firestore.collection('transportation_posts').add(post.toMap());
+  }
+
+  Future<void> updatePost(TransportationPost post) async {
+    await _firestore
+        .collection('transportation_posts')
+        .doc(post.id)
+        .update(post.toMap());
+  }
+
+  Future<void> deletePost(String postId) async {
+    await _firestore.collection('transportation_posts').doc(postId).delete();
   }
 }

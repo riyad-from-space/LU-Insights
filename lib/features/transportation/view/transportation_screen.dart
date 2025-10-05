@@ -36,7 +36,7 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(
-                  context, passwordController.text == 'transportation_12345');
+                  context, passwordController.text == 'transportationlu');
             },
             child: const Text('Enter'),
           ),
@@ -53,8 +53,10 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
         isTransportAdmin = false;
         passwordChecked = true;
       });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Incorrect password.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Incorrect password.')));
+      }
     }
   }
 
@@ -63,7 +65,7 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
     super.didChangeDependencies();
     final user = ref.watch(authControllerProvider).user;
     if (user != null && user.email == 'admin_lu@gmail.com') {
-      if (!isTransportAdmin) {
+      if (!passwordChecked) {
         _checkAdminPassword();
       }
     }
@@ -74,6 +76,16 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
     final user = ref.watch(authControllerProvider).user;
     final isAdmin =
         user != null && user.email == 'admin_lu@gmail.com' && isTransportAdmin;
+
+    // Show admin password instruction if user is admin but hasn't entered transportation password
+    final showAdminInstruction = user != null &&
+        user.email == 'admin_lu@gmail.com' &&
+        !isTransportAdmin &&
+        passwordChecked;
+
+    // Debug info - remove this later
+    print(
+        'Debug - User: ${user?.email}, isTransportAdmin: $isTransportAdmin, isAdmin: $isAdmin, passwordChecked: $passwordChecked');
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -88,11 +100,48 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            _BusScheduleTab(isAdmin: isAdmin),
-            const _MembersTab(),
-            _PostsTab(isAdmin: isAdmin),
+            // Admin instruction banner
+            if (showAdminInstruction)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                color: Colors.orange.withOpacity(0.1),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Enter transportation password to access admin features',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _checkAdminPassword,
+                      child: const Text(
+                        'Enter Password',
+                        style: TextStyle(color: Colors.orange),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Tab content
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _BusScheduleTab(isAdmin: isAdmin),
+                  const _MembersTab(),
+                  _PostsTab(isAdmin: isAdmin),
+                ],
+              ),
+            ),
           ],
         ),
         floatingActionButton: isAdmin
@@ -103,7 +152,8 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
                     // Posts tab
                     return FloatingActionButton(
                       onPressed: () =>
-                          _showAddPostDialog(context, ref, user.uid),
+                          _TransportationScreenHelper.showAddPostDialog(
+                              context, ref, user.uid),
                       backgroundColor: Colors.deepPurple,
                       child: const Icon(Icons.add),
                     );
@@ -137,8 +187,10 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
             TextField(
                 controller: titleController,
                 decoration: const InputDecoration(labelText: 'Title')),
+            const SizedBox(height: 16),
             TextField(
                 controller: contentController,
+                maxLines: 3,
                 decoration: const InputDecoration(labelText: 'Content')),
           ],
         ),
@@ -149,15 +201,29 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              if (titleController.text.trim().isEmpty ||
+                  contentController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please fill in both title and content')),
+                );
+                return;
+              }
+
               final post = TransportationPost(
                 id: '',
-                title: titleController.text,
-                content: contentController.text,
+                title: titleController.text.trim(),
+                content: contentController.text.trim(),
                 authorId: authorId,
                 createdAt: DateTime.now(),
               );
               await ref.read(transportationRepositoryProvider).addPost(post);
-              Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Post added successfully!')),
+                );
+              }
             },
             child: const Text('Post'),
           ),
@@ -236,25 +302,384 @@ class _MembersTab extends ConsumerWidget {
 class _PostsTab extends ConsumerWidget {
   final bool isAdmin;
   const _PostsTab({required this.isAdmin});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final postsAsync = ref.watch(transportationPostsProvider);
+    print('Debug PostsTab - isAdmin: $isAdmin');
     return postsAsync.when(
-      data: (posts) => ListView(
-        children: posts
-            .map((p) => Card(
-                  margin: const EdgeInsets.all(8),
-                  child: ListTile(
-                    title: Text(p.title),
-                    subtitle: Text(p.content),
-                    trailing: Text(
-                        '${p.createdAt.hour}:${p.createdAt.minute.toString().padLeft(2, '0')}'),
+      data: (posts) {
+        return Column(
+          children: [
+            // Debug info
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              color: Colors.blue.withOpacity(0.1),
+              child: Text(
+                'Debug: isAdmin = $isAdmin',
+                style: const TextStyle(fontSize: 12, color: Colors.blue),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+            // Add Post Button for Admins
+            if (isAdmin) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Get current user ID for author
+                    final user = ref.read(authControllerProvider).user;
+                    if (user != null) {
+                      _TransportationScreenHelper.showAddPostDialog(
+                          context, ref, user.uid);
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add New Post'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                ))
-            .toList(),
-      ),
+                ),
+              ),
+              const Divider(height: 1),
+            ],
+
+            // Always show a test button for debugging
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              child: ElevatedButton(
+                onPressed: () {
+                  final user = ref.read(authControllerProvider).user;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Debug: User=${user?.email}, isAdmin=$isAdmin',
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('DEBUG: Check Admin Status'),
+              ),
+            ),
+
+            // Posts List or Empty State
+            Expanded(
+              child: posts.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.article_outlined,
+                            size: 64,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No posts yet',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isAdmin
+                                ? 'Create the first transportation update!'
+                                : 'Be the first to share transportation updates!',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView(
+                      children: posts
+                          .map((p) => Card(
+                                margin: const EdgeInsets.all(8),
+                                elevation: 2,
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.all(16),
+                                  title: Text(
+                                    p.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        p.content,
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.access_time,
+                                            size: 14,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            _formatDateTime(p.createdAt),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: isAdmin
+                                      ? PopupMenuButton<String>(
+                                          onSelected: (value) {
+                                            if (value == 'edit') {
+                                              _TransportationScreenHelper
+                                                  .showEditPostDialog(
+                                                      context, ref, p);
+                                            } else if (value == 'delete') {
+                                              _TransportationScreenHelper
+                                                  .showDeleteConfirmationDialog(
+                                                      context, ref, p.id);
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            const PopupMenuItem(
+                                              value: 'edit',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.edit, size: 18),
+                                                  SizedBox(width: 8),
+                                                  Text('Edit'),
+                                                ],
+                                              ),
+                                            ),
+                                            const PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.delete,
+                                                      size: 18,
+                                                      color: Colors.red),
+                                                  SizedBox(width: 8),
+                                                  Text('Delete',
+                                                      style: TextStyle(
+                                                          color: Colors.red)),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                          child: const Icon(
+                                            Icons.more_vert,
+                                            color: Colors.grey,
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              ))
+                          .toList(),
+                    ),
+            ),
+          ],
+        );
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
+    );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+}
+
+class _TransportationScreenHelper {
+  static void showAddPostDialog(
+      BuildContext context, WidgetRef ref, String authorId) {
+    final titleController = TextEditingController();
+    final contentController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('New Post'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Title')),
+            const SizedBox(height: 16),
+            TextField(
+                controller: contentController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Content')),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty ||
+                  contentController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please fill in both title and content')),
+                );
+                return;
+              }
+
+              final post = TransportationPost(
+                id: '',
+                title: titleController.text.trim(),
+                content: contentController.text.trim(),
+                authorId: authorId,
+                createdAt: DateTime.now(),
+              );
+              await ref.read(transportationRepositoryProvider).addPost(post);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Post added successfully!')),
+                );
+              }
+            },
+            child: const Text('Post'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void showEditPostDialog(
+      BuildContext context, WidgetRef ref, TransportationPost post) {
+    final titleController = TextEditingController(text: post.title);
+    final contentController = TextEditingController(text: post.content);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Post'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Title')),
+            const SizedBox(height: 16),
+            TextField(
+                controller: contentController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Content')),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty ||
+                  contentController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please fill in both title and content')),
+                );
+                return;
+              }
+
+              final updatedPost = TransportationPost(
+                id: post.id,
+                title: titleController.text.trim(),
+                content: contentController.text.trim(),
+                authorId: post.authorId,
+                createdAt: post.createdAt,
+              );
+              await ref
+                  .read(transportationRepositoryProvider)
+                  .updatePost(updatedPost);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Post updated successfully!')),
+                );
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void showDeleteConfirmationDialog(
+      BuildContext context, WidgetRef ref, String postId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text(
+            'Are you sure you want to delete this post? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await ref
+                  .read(transportationRepositoryProvider)
+                  .deletePost(postId);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Post deleted successfully!')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }

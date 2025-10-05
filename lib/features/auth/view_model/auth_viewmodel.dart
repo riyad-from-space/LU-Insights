@@ -26,8 +26,8 @@ class AuthController extends StateNotifier<AuthStateGeneric> {
     required String password,
     required int studentId,
   }) async {
-    print(
-        "Registering user: $firstName, $lastName, $userName, $email, $studentId");
+    // print(
+    //     "Registering user: $firstName, $lastName, $userName, $email, $studentId");
     try {
       state = state.copyWith(isLoading: true);
       final user = await authRepository.register(
@@ -40,7 +40,7 @@ class AuthController extends StateNotifier<AuthStateGeneric> {
       );
       state = state.copyWith(user: user, isLoading: false);
     } catch (e) {
-      print("Error in register: $e");
+      // print("Error in register: $e");
       state = state.copyWith(isLoading: false, isError: true);
       rethrow;
     }
