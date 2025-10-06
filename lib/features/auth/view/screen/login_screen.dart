@@ -152,37 +152,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.deepPurple.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.deepPurple.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Column(
-                      children: [
-                        Text(
-                          'Admin Access',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Email: admin_lu@gmail.com\nPassword: Aa12345!',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.deepPurple,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Container(
+                  //   padding: const EdgeInsets.all(16),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.deepPurple.withOpacity(0.1),
+                  //     borderRadius: BorderRadius.circular(12),
+                  //     border: Border.all(
+                  //       color: Colors.deepPurple.withOpacity(0.3),
+                  //       width: 1,
+                  //     ),
+                  //   ),
+                  //   child: const Column(
+                  //     children: [
+                  //       Text(
+                  //         'Admin Access',
+                  //         style: TextStyle(
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.deepPurple,
+                  //         ),
+                  //       ),
+                  //       SizedBox(height: 8),
+                  //       Text(
+                  //         'Email: admin_lu@gmail.com\nPassword: Aa12345!',
+                  //         style: TextStyle(
+                  //           fontSize: 12,
+                  //           color: Colors.deepPurple,
+                  //         ),
+                  //         textAlign: TextAlign.center,
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
               ),
             ),
