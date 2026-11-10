@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Keep in sync with adminEmail in lib/features/admin/admin_config.dart.
+    function isAdmin() {
+      return signedIn() && request.auth.token.email == 'admin_lu@gmail.com';
+    }
+
+    // Each user can read and create only their own profile. Profiles may not
+    // carry a password and everyone signs up as a student.
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && !('password' in request.resource.data)
+        && request.resource.data.role == 'student';
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && !('password' in request.resource.data)
+        && request.resource.data.role == resource.data.role;
+      allow delete: if false;
+    }
+
+    // App content: any signed-in user can read, only the admin can change it.
+    match /features/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /clubs/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /transportation_schedules/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /transportation_members/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /transportation_posts/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

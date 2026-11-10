@@ -35,7 +35,6 @@ class AuthRepository {
         firstName: firstName,
         lastName: lastName,
         userName: userName,
-        password: password,
         studentId: studentId,
         role: role, // Added
       );

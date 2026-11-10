@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../admin/admin_config.dart';
 import '../../auth/view_model/auth_viewmodel.dart';
 import '../model/transportation_post_model.dart';
 import '../view_model/transportation_viewmodel.dart';
@@ -14,78 +15,11 @@ class TransportationScreen extends ConsumerStatefulWidget {
 }
 
 class _TransportationScreenState extends ConsumerState<TransportationScreen> {
-  bool isTransportAdmin = false;
-  bool passwordChecked = false;
-
-  void _checkAdminPassword() async {
-    final passwordController = TextEditingController();
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter Transportation Admin Password'),
-        content: TextField(
-          controller: passwordController,
-          obscureText: true,
-          decoration: const InputDecoration(labelText: 'Password'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(
-                  context, passwordController.text == 'transportationlu');
-            },
-            child: const Text('Enter'),
-          ),
-        ],
-      ),
-    );
-    if (result == true) {
-      setState(() {
-        isTransportAdmin = true;
-        passwordChecked = true;
-      });
-    } else if (result == false) {
-      setState(() {
-        isTransportAdmin = false;
-        passwordChecked = true;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Incorrect password.')));
-      }
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final user = ref.watch(authControllerProvider).user;
-    if (user != null && user.email == 'admin_lu@gmail.com') {
-      if (!passwordChecked) {
-        _checkAdminPassword();
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authControllerProvider).user;
-    final isAdmin =
-        user != null && user.email == 'admin_lu@gmail.com' && isTransportAdmin;
+    final user = ref.watch(authStatusProvider).valueOrNull;
+    final isAdmin = isAdminUser(user);
 
-    // Show admin password instruction if user is admin but hasn't entered transportation password
-    final showAdminInstruction = user != null &&
-        user.email == 'admin_lu@gmail.com' &&
-        !isTransportAdmin &&
-        passwordChecked;
-
-    // Debug info - remove this later
-    print(
-        'Debug - User: ${user?.email}, isTransportAdmin: $isTransportAdmin, isAdmin: $isAdmin, passwordChecked: $passwordChecked');
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -100,48 +34,11 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
             ],
           ),
         ),
-        body: Column(
+        body: TabBarView(
           children: [
-            // Admin instruction banner
-            if (showAdminInstruction)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                color: Colors.orange.withOpacity(0.1),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info, color: Colors.orange, size: 20),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Enter transportation password to access admin features',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _checkAdminPassword,
-                      child: const Text(
-                        'Enter Password',
-                        style: TextStyle(color: Colors.orange),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Tab content
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _BusScheduleTab(isAdmin: isAdmin),
-                  const _MembersTab(),
-                  _PostsTab(isAdmin: isAdmin),
-                ],
-              ),
-            ),
+            _BusScheduleTab(isAdmin: isAdmin),
+            const _MembersTab(),
+            _PostsTab(isAdmin: isAdmin),
           ],
         ),
         floatingActionButton: isAdmin
@@ -153,7 +50,7 @@ class _TransportationScreenState extends ConsumerState<TransportationScreen> {
                     return FloatingActionButton(
                       onPressed: () =>
                           _TransportationScreenHelper.showAddPostDialog(
-                              context, ref, user.uid),
+                              context, ref, user!.uid),
                       backgroundColor: Colors.deepPurple,
                       child: const Icon(Icons.add),
                     );
@@ -306,23 +203,10 @@ class _PostsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final postsAsync = ref.watch(transportationPostsProvider);
-    print('Debug PostsTab - isAdmin: $isAdmin');
     return postsAsync.when(
       data: (posts) {
         return Column(
           children: [
-            // Debug info
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(8),
-              color: Colors.blue.withOpacity(0.1),
-              child: Text(
-                'Debug: isAdmin = $isAdmin',
-                style: const TextStyle(fontSize: 12, color: Colors.blue),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
             // Add Post Button for Admins
             if (isAdmin) ...[
               Container(
@@ -331,7 +215,7 @@ class _PostsTab extends ConsumerWidget {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     // Get current user ID for author
-                    final user = ref.read(authControllerProvider).user;
+                    final user = ref.read(authStatusProvider).valueOrNull;
                     if (user != null) {
                       _TransportationScreenHelper.showAddPostDialog(
                           context, ref, user.uid);
@@ -351,29 +235,6 @@ class _PostsTab extends ConsumerWidget {
               ),
               const Divider(height: 1),
             ],
-
-            // Always show a test button for debugging
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(8),
-              child: ElevatedButton(
-                onPressed: () {
-                  final user = ref.read(authControllerProvider).user;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Debug: User=${user?.email}, isAdmin=$isAdmin',
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('DEBUG: Check Admin Status'),
-              ),
-            ),
 
             // Posts List or Empty State
             Expanded(

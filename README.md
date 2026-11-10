@@ -18,7 +18,7 @@ A Flutter + Firebase campus companion app for students of Leading University, Sy
   - **Bus Schedule**: trips to and from the university by time, with route numbers and bus numbers.
   - **Members**: the transport committee's names, designations and contact details.
   - **Posts**: transport notices, newest first.
-- **Managing transport notices (admin only).** The admin account can create, edit and delete posts after entering an extra transportation passcode.
+- **Managing transport notices (admin only).** The admin account can create, edit and delete posts; Firestore security rules reject these writes from anyone else.
 - **Clubs directory**: a read-only list of university clubs from Firestore.
 - **Admin panel (admin only)**: a dashboard with shortcuts to Transportation and Clubs. Non-admins who open admin routes get an "Access Denied" screen.
 
@@ -33,12 +33,12 @@ Each feature follows an MVVM layout:
 - **view_model**: Riverpod providers that sit between screens and repositories. A plain `Provider` exposes each repository. Data is read through `FutureProvider` for one-off reads (home features, clubs) or `StreamProvider` for real-time Firestore snapshots (transportation). Auth actions go through a `StateNotifierProvider` (`AuthController`), and a `StreamProvider` over `authStateChanges()` drives navigation.
 - **view**: `ConsumerWidget` screens that `watch` providers and render loading, error and data states with `AsyncValue.when`.
 
-Admin access currently depends on one admin email set in `lib/main.dart`. Each user profile already stores a `role` field, and there's an `AppRole` enum, but neither is used for access control yet.
+Admin access depends on one admin email, set in `lib/features/admin/admin_config.dart` for the UI and in `firestore.rules` for enforcement. Each user profile already stores a `role` field, and there's an `AppRole` enum, but neither is used for access control yet.
 
 ```
 lib/
 └── features/
-    ├── admin/                # admin dashboard + admin account setup screen
+    ├── admin/                # admin dashboard + admin email config
     ├── auth/
     │   ├── model/            # UserModel, AppRole enum
     │   ├── repositories/     # Firebase Auth + `users` collection
@@ -94,7 +94,7 @@ flutterfire configure
 This command regenerates `lib/firebase_options.dart`, `firebase.json` and the platform config files so they point at your project. In the Firebase console:
 
 - Turn on **Authentication → Email/Password**.
-- Create a **Cloud Firestore** database. The repo doesn't include security rules, so write your own before you deploy.
+- Create a **Cloud Firestore** database, then deploy the included rules with `firebase deploy --only firestore:rules`. They let users read and create only their own profile, let any signed-in user read app content, and allow only the admin to change it.
 
 ### 3. Add data
 
@@ -110,7 +110,7 @@ There's no seeding script yet, so add documents in the Firebase console. These a
 
 The app writes `users` documents itself when someone signs up.
 
-To use the admin features, change the admin email in `lib/main.dart` and `lib/features/transportation/view/transportation_screen.dart` to your own, then sign up in the app with that email. The transportation passcode is also defined in `transportation_screen.dart`.
+To use the admin features, set the admin email in `lib/features/admin/admin_config.dart` and `firestore.rules` to your own, deploy the rules, then sign up in the app with that email.
 
 ### 4. Run
 
