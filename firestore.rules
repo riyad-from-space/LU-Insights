@@ -12,18 +12,19 @@ service cloud.firestore {
       return signedIn() && request.auth.token.email == 'admin_lu@gmail.com';
     }
 
-    // Each user can read and create only their own profile. Profiles may not
-    // carry a password and everyone signs up as a student.
+    // Signed-in users can read profiles (names are shown next to bookings and
+    // resources). Each user creates and edits only their own; profiles may not
+    // carry a password, and nobody can sign themselves up as admin.
     match /users/{userId} {
-      allow read: if signedIn() && request.auth.uid == userId;
+      allow read: if signedIn();
       allow create: if signedIn()
         && request.auth.uid == userId
         && !('password' in request.resource.data)
-        && request.resource.data.role == 'student';
+        && request.resource.data.get('role', 'student') in ['student', 'faculty'];
       allow update: if signedIn()
         && request.auth.uid == userId
         && !('password' in request.resource.data)
-        && request.resource.data.role == resource.data.role;
+        && request.resource.data.get('role', null) == resource.data.get('role', null);
       allow delete: if false;
     }
 
@@ -51,6 +52,28 @@ service cloud.firestore {
     match /transportation_posts/{docId} {
       allow read: if signedIn();
       allow write: if isAdmin();
+    }
+
+    // Rooms are set up by the admin; signed-in users book and free time slots.
+    match /classrooms/{roomId} {
+      allow read: if signedIn();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['slots']));
+    }
+
+    // One schedule document per user, keyed by their uid.
+    match /facultyrooms/{userId} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Course resource lists: signed-in users add courses and links, only the
+    // admin can remove a course.
+    match /resources/{courseId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn();
+      allow delete: if isAdmin();
     }
   }
 }
